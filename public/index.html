@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <meta name="description" content="游戏基础故障排查引导工具">
+    <title>游戏故障排查</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            max-width: 600px;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            padding: 20px 30px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            color: #6c757d;
+        }
+
+        .progress-step.active {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .progress-step.completed {
+            color: #28a745;
+        }
+
+        .step-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .progress-step.active .step-number {
+            background: #667eea;
+            color: white;
+        }
+
+        .progress-step.completed .step-number {
+            background: #28a745;
+            color: white;
+        }
+
+        .step-content {
+            padding: 30px;
+        }
+
+        .step-title {
+            font-size: 20px;
+            color: #212529;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .step-title .icon {
+            font-size: 24px;
+        }
+
+        .step-description {
+            color: #6c757d;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .instruction-box {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .instruction-box h3 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            color: #212529;
+        }
+
+        .instruction-box ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .instruction-box li {
+            padding: 8px 0;
+            padding-left: 24px;
+            position: relative;
+            color: #495057;
+        }
+
+        .instruction-box li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #28a745;
+            font-weight: bold;
+        }
+
+        .action-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 28px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .action-button.secondary {
+            background: #e9ecef;
+            color: #495057;
+        }
+
+        .action-button.secondary:hover {
+            background: #dee2e6;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .button-group .action-button {
+            flex: 1;
+        }
+
+        .success-message {
+            text-align: center;
+            padding: 40px 30px;
+        }
+
+        .success-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+
+        .success-title {
+            font-size: 24px;
+            color: #28a745;
+            margin-bottom: 10px;
+        }
+
+        .success-description {
+            color: #6c757d;
+            line-height: 1.6;
+        }
+
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px 20px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+
+        .warning-box h4 {
+            color: #856404;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .warning-box p {
+            color: #856404;
+            font-size: 14px;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+
+        .status-indicator.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-indicator.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-indicator.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 游戏故障排查助手</h1>
+            <p>按照以下步骤进行基础排查，快速解决问题</p>
+        </div>
+
+        <div class="progress-bar" id="progressBar">
+            <div class="progress-step active" data-step="1">
+                <span class="step-number">1</span>
+                <span>重启设备</span>
+            </div>
+            <div class="progress-step" data-step="2">
+                <span class="step-number">2</span>
+                <span>清除缓存</span>
+            </div>
+            <div class="progress-step" data-step="3">
+                <span class="step-number">3</span>
+                <span>切换网络</span>
+            </div>
+            <div class="progress-step" data-step="4">
+                <span class="step-number">4</span>
+                <span>更新版本</span>
+            </div>
+        </div>
+
+        <!-- Step 1: Restart Device -->
+        <div class="step-content" id="step1">
+            <div class="step-title">
+                <span class="icon">🔄</span>
+                步骤 1: 重启设备
+            </div>
+            <div class="step-description">
+                重启设备是最基础的故障排查方法，可以清除临时文件并刷新系统状态。
+            </div>
+            <div class="instruction-box">
+                <h3>操作步骤：</h3>
+                <ul>
+                    <li>保存当前所有工作</li>
+                    <li>完全关闭游戏程序</li>
+                    <li>关闭设备电源</li>
+                    <li>等待至少 10 秒钟</li>
+                    <li>重新启动设备</li>
+                    <li>再次打开游戏</li>
+                </ul>
+            </div>
+            <button class="action-button" onclick="completeStep(1)">
+                ✅ 已完成重启
+            </button>
+        </div>
+
+        <!-- Step 2: Clear Cache -->
+        <div class="step-content hidden" id="step2">
+            <div class="step-title">
+                <span class="icon">🧹</span>
+                步骤 2: 清除缓存
+            </div>
+            <div class="step-description">
+                清除游戏缓存可以解决因缓存文件损坏导致的各类问题。
+            </div>
+            <div class="instruction-box">
+                <h3>操作步骤：</h3>
+                <ul>
+                    <li>打开游戏设置菜单</li>
+                    <li>找到"清除缓存"或"清理数据"选项</li>
+                    <li>确认清除操作</li>
+                    <li>等待清除完成</li>
+                    <li>重新登录游戏</li>
+                </ul>
+            </div>
+            <div class="warning-box">
+                <h4>⚠️ 注意</h4>
+                <p>清除缓存不会删除您的游戏数据，但可能需要重新下载部分资源。</p>
+            </div>
+            <button class="action-button" onclick="completeStep(2)">
+                ✅ 已完成清除缓存
+            </button>
+        </div>
+
+        <!-- Step 3: Switch Network -->
+        <div class="step-content hidden" id="step3">
+            <div class="step-title">
+                <span class="icon">📶</span>
+                步骤 3: 切换网络
+            </div>
+            <div class="step-description">
+                网络问题可能导致游戏无法正常连接或运行缓慢，切换网络环境可以排查此类问题。
+            </div>
+            <div class="instruction-box">
+                <h3>操作步骤：</h3>
+                <ul>
+                    <li>如果是 WiFi 连接，尝试切换到移动数据</li>
+                    <li>如果是移动数据，尝试切换到 WiFi</li>
+                    <li>重启路由器或光猫</li>
+                    <li>等待网络重新连接</li>
+                    <li>检查网络延迟是否正常</li>
+                </ul>
+            </div>
+            <div class="warning-box">
+                <h4>💡 建议</h4>
+                <p>确保网络信号稳定，避免在网络切换时进行游戏。</p>
+            </div>
+            <button class="action-button" onclick="completeStep(3)">
+                ✅ 已完成网络切换
+            </button>
+        </div>
+
+        <!-- Step 4: Update Game -->
+        <div class="step-content hidden" id="step4">
+            <div class="step-title">
+                <span class="icon">⬆️</span>
+                步骤 4: 更新游戏版本
+            </div>
+            <div class="step-description">
+                旧版本游戏可能存在已知的 Bug，更新到最新版本可以解决很多问题。
+            </div>
+            <div class="instruction-box">
+                <h3>操作步骤：</h3>
+                <ul>
+                    <li>打开游戏商店或应用市场</li>
+                    <li>搜索并进入游戏页面</li>
+                    <li>点击"更新"按钮</li>
+                    <li>等待下载和安装完成</li>
+                    <li>启动最新版本的游戏</li>
+                </ul>
+            </div>
+            <div class="status-indicator warning" id="versionStatus">
+                <span class="dot"></span>
+                <span id="versionText">正在获取版本信息...</span>
+            </div>
+            <button class="action-button" onclick="completeStep(4)">
+                ✅ 已完成版本更新
+            </button>
+        </div>
+
+        <!-- Success Page -->
+        <div class="success-message hidden" id="successPage">
+            <div class="success-icon">🎉</div>
+            <div class="success-title">排查完成！</div>
+            <div class="success-description">
+                <p>感谢您完成所有基础排查步骤。</p>
+                <p>如果问题仍然存在，请联系客服支持。</p>
+            </div>
+            <div class="button-group">
+                <button class="action-button secondary" onclick="restartTroubleshooting()">
+                    🔄 重新排查
+                </button>
+                <button class="action-button" onclick="reportIssue()">
+                    📞 联系客服
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 当前步骤
+        let currentStep = 1;
+        const totalSteps = 4;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            fetchVersionInfo();
+        });
+
+        // 获取版本信息
+        async function fetchVersionInfo() {
+            try {
+                const response = await fetch('/api/game/version');
+                const data = await response.json();
+                
+                const versionStatus = document.getElementById('versionStatus');
+                const versionText = document.getElementById('versionText');
+                
+                if (data.updateAvailable) {
+                    versionStatus.className = 'status-indicator warning';
+                    versionText.textContent = `发现新版本 v${data.latestVersion}，当前版本 v${data.currentVersion}`;
+                } else {
+                    versionStatus.className = 'status-indicator success';
+                    versionText.textContent = `已是最新版本 v${data.currentVersion}`;
+                }
+            } catch (error) {
+                console.error('获取版本信息失败:', error);
+                document.getElementById('versionText').textContent = '无法获取版本信息';
+            }
+        }
+
+        // 完成步骤
+        async function completeStep(step) {
+            try {
+                // 发送到后端记录
+                await fetch('/api/troubleshoot/log', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        step: step,
+                        timestamp: new Date().toISOString(),
+                        completed: true
+                    })
+                });
+            } catch (error) {
+                console.error('记录步骤失败:', error);
+            }
+
+            // 更新UI
+            updateProgress(step);
+            
+            // 显示下一步
+            if (step < totalSteps) {
+                document.getElementById(`step${step}`).classList.add('hidden');
+                document.getElementById(`step${step + 1}`).classList.remove('hidden');
+                currentStep = step + 1;
+                
+                // 如果是版本检查步骤，刷新版本信息
+                if (step === 3) {
+                    fetchVersionInfo();
+                }
+            } else {
+                // 所有步骤完成
+                showSuccess();
+            }
+        }
+
+        // 更新进度条
+        function updateProgress(completedStep) {
+            const steps = document.querySelectorAll('.progress-step');
+            steps.forEach((step, index) => {
+                const stepNum = index + 1;
+                if (stepNum < completedStep) {
+                    step.classList.remove('active');
+                    step.classList.add('completed');
+                } else if (stepNum === completedStep) {
+                    step.classList.add('active');
+                    step.classList.remove('completed');
+                } else {
+                    step.classList.remove('active', 'completed');
+                }
+            });
+        }
+
+        // 显示成功页面
+        function showSuccess() {
+            document.getElementById(`step${totalSteps}`).classList.add('hidden');
+            document.getElementById('progressBar').classList.add('hidden');
+            document.getElementById('successPage').classList.remove('hidden');
+            
+            // 记录完成状态
+            fetch('/api/troubleshoot/complete', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    timestamp: new Date().toISOString(),
+                    allStepsCompleted: true
+                })
+            }).catch(err => console.error('记录完成状态失败:', err));
+        }
+
+        // 重新开始排查
+        function restartTroubleshooting() {
+            currentStep = 1;
+            
+            // 重置所有步骤显示
+            for (let i = 1; i <= totalSteps; i++) {
+                document.getElementById(`step${i}`).classList.add('hidden');
+            }
+            document.getElementById('step1').classList.remove('hidden');
+            document.getElementById('successPage').classList.add('hidden');
+            document.getElementById('progressBar').classList.remove('hidden');
+            
+            // 重置进度条
+            updateProgress(0);
+        }
+
+        // 报告问题
+        function reportIssue() {
+            alert('请联系客服热线：400-xxx-xxxx\n或发送邮件至：support@example.com');
+        }
+    </script>
+</body>
+</html>

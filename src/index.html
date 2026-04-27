@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>游戏主菜单</title>
+    <link rel="stylesheet" href="styles/main-menu.css">
+</head>
+<body>
+    <div class="menu-container">
+        <div class="background-effects">
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="particle"></div>
+            <div class="glow-orb orb-1"></div>
+            <div class="glow-orb orb-2"></div>
+        </div>
+        
+        <div class="menu-content">
+            <header class="game-title">
+                <h1 class="title-text">
+                    <span class="title-char">星</span>
+                    <span class="title-char">际</span>
+                    <span class="title-char">征</span>
+                    <span class="title-char">途</span>
+                </h1>
+                <p class="subtitle">STELLAR JOURNEY</p>
+            </header>
+
+            <nav class="main-menu" role="navigation" aria-label="主菜单">
+                <ul class="menu-list">
+                    <li class="menu-item active" data-action="start" tabindex="0">
+                        <span class="menu-icon">▶</span>
+                        <span class="menu-text">开始游戏</span>
+                        <span class="menu-shortcut">Enter</span>
+                        <div class="menu-glow"></div>
+                    </li>
+                    <li class="menu-item" data-action="continue" tabindex="0">
+                        <span class="menu-icon">↻</span>
+                        <span class="menu-text">继续游戏</span>
+                        <span class="menu-shortcut"></span>
+                        <div class="menu-glow"></div>
+                    </li>
+                    <li class="menu-item" data-action="shop" tabindex="0">
+                        <span class="menu-icon">◆</span>
+                        <span class="menu-text">游戏商店</span>
+                        <span class="menu-badge">3</span>
+                        <span class="menu-shortcut">S</span>
+                        <div class="menu-glow"></div>
+                    </li>
+                    <li class="menu-item" data-action="achievements" tabindex="0">
+                        <span class="menu-icon">★</span>
+                        <span class="menu-text">成就系统</span>
+                        <span class="menu-shortcut">A</span>
+                        <div class="menu-glow"></div>
+                    </li>
+                    <li class="menu-item" data-action="settings" tabindex="0">
+                        <span class="menu-icon">⚙</span>
+                        <span class="menu-text">游戏设置</span>
+                        <span class="menu-shortcut">O</span>
+                        <div class="menu-glow"></div>
+                    </li>
+                    <li class="menu-item" data-action="credits" tabindex="0">
+                        <span class="menu-icon">ℹ</span>
+                        <span class="menu-text">制作人员</span>
+                        <span class="menu-shortcut">C</span>
+                        <div class="menu-glow"></div>
+                    </li>
+                    <li class="menu-item exit-item" data-action="exit" tabindex="0">
+                        <span class="menu-icon">✕</span>
+                        <span class="menu-text">退出游戏</span>
+                        <span class="menu-shortcut">Esc</span>
+                        <div class="menu-glow"></div>
+                    </li>
+                </ul>
+            </nav>
+
+            <footer class="menu-footer">
+                <div class="player-info">
+                    <div class="player-avatar">
+                        <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Player" alt="玩家头像">
+                    </div>
+                    <div class="player-stats">
+                        <span class="player-name">星际旅行者</span>
+                        <span class="player-level">等级 42</span>
+                    </div>
+                </div>
+                <div class="system-info">
+                    <span class="online-status">
+                        <span class="status-dot"></span>
+                        在线
+                    </span>
+                    <span class="version">v2.4.1</span>
+                </div>
+            </footer>
+        </div>
+
+        <div class="settings-panel" id="settingsPanel">
+            <div class="panel-header">
+                <h2>游戏设置</h2>
+                <button class="close-btn" data-close="settings">✕</button>
+            </div>
+            <div class="panel-content">
+                <div class="setting-group">
+                    <label>音乐音量</label>
+                    <input type="range" min="0" max="100" value="80" class="slider" id="musicVolume">
+                    <span class="slider-value">80%</span>
+                </div>
+                <div class="setting-group">
+                    <label>音效音量</label>
+                    <input type="range" min="0" max="100" value="70" class="slider" id="sfxVolume">
+                    <span class="slider-value">70%</span>
+                </div>
+                <div class="setting-group">
+                    <label>显示质量</label>
+                    <select class="setting-select">
+                        <option>低</option>
+                        <option selected>中</option>
+                        <option>高</option>
+                        <option>极致</option>
+                    </select>
+                </div>
+                <div class="setting-group toggle-group">
+                    <label>全屏模式</label>
+                    <button class="toggle-btn" id="fullscreenToggle">
+                        <span class="toggle-slider"></span>
+                    </button>
+                </div>
+                <div class="setting-group toggle-group">
+                    <label>垂直同步</label>
+                    <button class="toggle-btn active" id="vsyncToggle">
+                        <span class="toggle-slider"></span>
+                    </button>
+                </div>
+            </div>
+            <div class="panel-footer">
+                <button class="btn btn-secondary" data-action="resetSettings">恢复默认</button>
+                <button class="btn btn-primary" data-action="saveSettings">保存设置</button>
+            </div>
+        </div>
+
+        <div class="modal-overlay" id="modalOverlay">
+            <div class="modal-box" id="modalBox">
+                <h3 class="modal-title" id="modalTitle">确认操作</h3>
+                <p class="modal-message" id="modalMessage">确定要执行此操作吗？</p>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="modalCancel">取消</button>
+                    <button class="btn btn-danger" id="modalConfirm">确认</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="scripts/main-menu.js"></script>
+</body>
+</html>
