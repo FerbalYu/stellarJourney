@@ -6,10 +6,38 @@
 // 全局测试超时设置
 jest.setTimeout(30000);
 
+// localStorage mock (Node.js 环境下不可用)
+const localStorageMock = (() => {
+  let store = {};
+  return {
+    getItem: (key) => store[key] || null,
+    setItem: (key, value) => {
+      store[key] = String(value);
+    },
+    removeItem: (key) => {
+      delete store[key];
+    },
+    clear: () => {
+      store = {};
+    },
+    get length() {
+      return Object.keys(store).length;
+    },
+    key: (index) => Object.keys(store)[index] || null,
+  };
+})();
+
+Object.defineProperty(global, 'localStorage', {
+  value: localStorageMock,
+  writable: true,
+  configurable: true,
+});
+
 // 全局 beforeAll
 beforeAll(async () => {
   process.env.NODE_ENV = 'test';
   process.env.JWT_SECRET = 'test-secret-key-for-testing';
+  process.env.PORT = '0'; // prevent port binding during tests
 });
 
 // 全局 afterAll

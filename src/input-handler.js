@@ -55,6 +55,14 @@ class InputHandler {
       case 'Escape':
         if (this.onMenu) this.onMenu();
         break;
+      case 'F5':
+        e.preventDefault();
+        if (this.onAction) this.onAction('save');
+        break;
+      case 'F9':
+        e.preventDefault();
+        if (this.onAction) this.onAction('load');
+        break;
     }
   }
 

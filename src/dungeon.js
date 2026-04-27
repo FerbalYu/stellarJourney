@@ -244,30 +244,31 @@ class DungeonGenerator {
     for (const room of this.rooms) {
       const bounds = room.getBounds();
 
-      // 检查每个墙边
-      for (let x = bounds.left; x <= bounds.right; x++) {
-        // 上边
-        if (bounds.top > 0 && this.map[bounds.top - 1][x] === TILE.CORRIDOR) {
-          this.map[bounds.top][x] = TILE.DOOR;
-          room.addDoor(x, bounds.top, 'up');
+      // 钳制在有效地图范围
+      const left = Math.max(0, bounds.left);
+      const right = Math.min(this.width - 1, bounds.right);
+      const top = Math.max(0, bounds.top);
+      const bottom = Math.min(this.height - 1, bounds.bottom);
+
+      for (let x = left; x <= right; x++) {
+        if (top > 0 && x < this.width && this.map[top - 1] && this.map[top - 1][x] === TILE.CORRIDOR) {
+          this.map[top][x] = TILE.DOOR;
+          room.addDoor(x, top, 'up');
         }
-        // 下边
-        if (bounds.bottom < this.height - 1 && this.map[bounds.bottom + 1][x] === TILE.CORRIDOR) {
-          this.map[bounds.bottom][x] = TILE.DOOR;
-          room.addDoor(x, bounds.bottom, 'down');
+        if (bottom < this.height - 1 && x < this.width && this.map[bottom + 1] && this.map[bottom + 1][x] === TILE.CORRIDOR) {
+          this.map[bottom][x] = TILE.DOOR;
+          room.addDoor(x, bottom, 'down');
         }
       }
 
-      for (let y = bounds.top; y <= bounds.bottom; y++) {
-        // 左边
-        if (bounds.left > 0 && this.map[y][bounds.left - 1] === TILE.CORRIDOR) {
-          this.map[y][bounds.left] = TILE.DOOR;
-          room.addDoor(bounds.left, y, 'left');
+      for (let y = top; y <= bottom; y++) {
+        if (this.map[y] && left > 0 && this.map[y][left - 1] === TILE.CORRIDOR) {
+          this.map[y][left] = TILE.DOOR;
+          room.addDoor(left, y, 'left');
         }
-        // 右边
-        if (bounds.right < this.width - 1 && this.map[y][bounds.right + 1] === TILE.CORRIDOR) {
-          this.map[y][bounds.right] = TILE.DOOR;
-          room.addDoor(bounds.right, y, 'right');
+        if (this.map[y] && right < this.width - 1 && this.map[y][right + 1] === TILE.CORRIDOR) {
+          this.map[y][right] = TILE.DOOR;
+          room.addDoor(right, y, 'right');
         }
       }
     }

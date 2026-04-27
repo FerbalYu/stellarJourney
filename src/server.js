@@ -214,34 +214,36 @@ app.use((err, req, res, _next) => {
   }
 });
 
-// 启动服务器
-const server = app.listen(PORT, () => {
-  logger.info(`服务器启动成功`, {
-    port: PORT,
-    env: NODE_ENV,
-    nodeVersion: process.version,
-    pid: process.pid,
-  });
-});
-
-// 优雅关闭
-const gracefulShutdown = (signal) => {
-  logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
-
-  server.close(() => {
-    logger.info('HTTP 服务器已关闭');
-    process.exit(0);
+// 启动服务器 (非测试环境)
+if (process.env.NODE_ENV !== 'test') {
+  const server = app.listen(PORT, () => {
+    logger.info(`服务器启动成功`, {
+      port: PORT,
+      env: NODE_ENV,
+      nodeVersion: process.version,
+      pid: process.pid,
+    });
   });
 
-  // 强制关闭超时
-  setTimeout(() => {
-    logger.error('无法优雅关闭，强制退出');
-    process.exit(1);
-  }, 10000);
-};
+  // 优雅关闭
+  const gracefulShutdown = (signal) => {
+    logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
 
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+    server.close(() => {
+      logger.info('HTTP 服务器已关闭');
+      process.exit(0);
+    });
+
+    // 强制关闭超时
+    setTimeout(() => {
+      logger.error('无法优雅关闭，强制退出');
+      process.exit(1);
+    }, 10000);
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+}
 
 // 未捕获的异常处理
 process.on('uncaughtException', (error) => {

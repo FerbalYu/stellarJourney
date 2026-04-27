@@ -4,10 +4,12 @@
  */
 
 import { executeCombat, isAdjacent } from './combat.js';
+import db from './database.js';
 import DungeonGenerator from './dungeon.js';
 import InputHandler from './input-handler.js';
 import Player from './player.js';
 import Renderer from './renderer.js';
+import saveSystem from './save-system.js';
 import settings from './settings.js';
 import sound from './sound.js';
 import { spawnEnemies, spawnItems } from './spawner.js';
@@ -247,6 +249,35 @@ class Game {
 
     if (action === 'inventory') {
       this._showInventory();
+    }
+
+    if (action === 'save') {
+      this._quickSave();
+    }
+
+    if (action === 'load') {
+      this._quickLoad();
+    }
+  }
+
+  _quickSave() {
+    const result = saveSystem.save(this.getState());
+    if (result.success) {
+      this._logMessage(`遊戲已保存 (槽位 ${result.slot}: ${result.name})。`);
+    } else {
+      this._logMessage(`保存失敗: ${result.error}。`);
+    }
+  }
+
+  _quickLoad() {
+    const lastSlot = saveSystem.getLastSlot();
+    if (!saveSystem.hasSaves()) {
+      this._logMessage('沒有可用的存檔。');
+      return;
+    }
+    const save = saveSystem.load(lastSlot);
+    if (save) {
+      this._logMessage(`從存檔槽位 ${lastSlot} 加載中... (${save.name})`);
     }
   }
 
