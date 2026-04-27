@@ -9,7 +9,7 @@
     "dev:server": "node src/server.js",
     "build": "webpack --mode production --config webpack.config.cjs",
     "build:analyze": "ANALYZE=1 webpack --mode production --config webpack.config.cjs",
-    "start": "node dist/index.js",
+    "start": "node src/server.js",
     "start:server": "node src/server.js",
     "start:prod": "pm2-runtime start ecosystem.config.cjs --env production",
     "test": "jest --config jest.config.cjs",
