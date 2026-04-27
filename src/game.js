@@ -1,20 +1,22 @@
 /**
  * 游戏主循环
- * 串联地牢生成、玩家、视野、输入、渲染、战斗、敌人、物品
+ * 串联地牢生成、玩家、视野、输入、渲染、战斗、敌人、物品、音效
  */
 
-import { executeCombat, isAdjacent, isInAttackDirection } from './combat.js';
+import { executeCombat, isAdjacent } from './combat.js';
 import DungeonGenerator from './dungeon.js';
-import Enemy from './enemy.js';
 import InputHandler from './input-handler.js';
 import Player from './player.js';
 import Renderer from './renderer.js';
+import settings from './settings.js';
+import sound from './sound.js';
 import { spawnEnemies, spawnItems } from './spawner.js';
-import { tilesToObstacles, isBlocked } from './tile-converter.js';
+import { tilesToObstacles } from './tile-converter.js';
 import FogOfWar from './visibility/FogOfWar.js';
 import { FogState } from './visibility/types.js';
 
 const TILE = { VOID: 0, FLOOR: 1, WALL: 2, DOOR: 3, CORRIDOR: 4, STAIRS_UP: 5, STAIRS_DOWN: 6 };
+const BOSS_LEVEL = 10;
 
 class Game {
   constructor(canvas, messageEl) {
@@ -38,10 +40,10 @@ class Game {
     this.obstacles = [];
     this.running = false;
     this.gameOver = false;
+    this.victory = false;
     this.animFrameId = null;
     this.moveCooldown = 0;
     this.moveDelay = 6;
-    this.turnCounter = 0;
     this.rooms = [];
 
     this._boundLoop = this._loop.bind(this);
@@ -55,9 +57,10 @@ class Game {
     this.input.onMenu = () => this._handleMenu();
     this.running = true;
     this.gameOver = false;
+    this.victory = false;
     this.moveCooldown = 0;
     this._loop();
-    this._logMessage('歡迎來到星際征途！使用方向鍵/WASD 移動，接近敵人自動攻擊。');
+    this._logMessage('歡迎來到星際征途！WASD/方向鍵移動，M 開關音效。');
   }
 
   stop() {
@@ -88,7 +91,6 @@ class Game {
     this.rooms = result.rooms;
     this.obstacles = tilesToObstacles(this.map, this.mapWidth, this.mapHeight, 1);
 
-    // 玩家放在起始房间
     const startRoom = result.rooms[0];
     const center = startRoom.getCenter();
     if (!this.player) {
@@ -98,13 +100,9 @@ class Game {
       this.player.y = center.y;
     }
 
-    // 生成敌人
     this.enemies = spawnEnemies(this.rooms, this.map, this.currentLevelNum);
-
-    // 生成物品
     this.groundItems = spawnItems(this.rooms, this.currentLevelNum);
 
-    // 初始化迷雾
     this.fog = new FogOfWar({
       width: this.mapWidth,
       height: this.mapHeight,
@@ -134,17 +132,36 @@ class Game {
     const { renderer } = this;
 
     renderer.clear();
-    renderer.centerCamera(this.player.x, this.player.y);
+    if (!this.gameOver) {
+      renderer.centerCamera(this.player.x, this.player.y);
+    }
 
     renderer.renderMap(this.map, this.mapWidth, this.mapHeight);
     this._renderFog();
     renderer.renderItems(this.groundItems);
     renderer.renderEnemies(this.enemies);
-    renderer.renderPlayer(this.player.x, this.player.y, this.player.facing.name);
+
+    if (!this.gameOver) {
+      renderer.renderPlayer(this.player.x, this.player.y, this.player.facing.name);
+    }
+
     renderer.renderHUD(this.player.getSummary(), this.currentLevelNum);
     renderer.renderMessageLog(this.messages);
 
-    if (this.gameOver) {
+    if (settings.get('showMinimap')) {
+      renderer.renderMinimap(
+        this.map,
+        this.mapWidth,
+        this.mapHeight,
+        this.player.x,
+        this.player.y,
+        this.enemies
+      );
+    }
+
+    if (this.victory) {
+      renderer.renderVictory(this.player.getSummary());
+    } else if (this.gameOver) {
       renderer.renderGameOver();
     }
 
@@ -180,7 +197,21 @@ class Game {
     const nx = this.player.x + direction.x;
     const ny = this.player.y + direction.y;
 
-    // 检查目标位置是否有敌人 → 攻击
+    // 对角线移动时检测角落阻断 (防止从两个斜角墙之间穿过)
+    if (direction.x !== 0 && direction.y !== 0) {
+      const corner1X = this.player.x + direction.x;
+      const corner1Y = this.player.y;
+      const corner2X = this.player.x;
+      const corner2Y = this.player.y + direction.y;
+      if (
+        this._isWall(corner1X, corner1Y) &&
+        this._isWall(corner2X, corner2Y)
+      ) {
+        return;
+      }
+    }
+
+    // 检查目标位置是否有敌人
     const targetEnemy = this._enemyAt(nx, ny);
     if (targetEnemy) {
       this._doCombat(targetEnemy);
@@ -188,13 +219,14 @@ class Game {
       return;
     }
 
-    // 检查能否移动
+    // 移动
     const moved = this.player.tryMove(direction, (mx, my) => {
       if (mx < 0 || my < 0 || mx >= this.mapWidth || my >= this.mapHeight) return false;
       return this.map[my][mx] !== TILE.WALL;
     });
 
     if (moved) {
+      sound.footstep();
       this._onPlayerMoved();
     }
   }
@@ -206,13 +238,10 @@ class Game {
       const fx = this.player.x + this.player.facing.x;
       const fy = this.player.y + this.player.facing.y;
       if (fy >= 0 && fy < this.mapHeight && fx >= 0 && fx < this.mapWidth) {
-        const tile = this.map[fy][fx];
-        if (tile === TILE.DOOR) {
+        if (this.map[fy][fx] === TILE.DOOR) {
           this._openDoor(fx, fy);
         }
       }
-
-      // 拾取脚下物品
       this._pickupItem();
     }
 
@@ -223,7 +252,17 @@ class Game {
 
   _handleMenu() {
     if (this.gameOver) return;
+    if (this.input.isDown('KeyM')) {
+      const on = sound.toggle();
+      this._logMessage(on ? '音效 開' : '音效 關');
+      return;
+    }
     this._logMessage('遊戲暫停。');
+  }
+
+  _isWall(x, y) {
+    if (x < 0 || y < 0 || x >= this.mapWidth || y >= this.mapHeight) return false;
+    return this.map[y][x] === TILE.WALL;
   }
 
   _onPlayerMoved() {
@@ -254,14 +293,26 @@ class Game {
     }
 
     if (result.enemyXp > 0) {
+      // Boss 击杀→通关
+      if (this.currentLevelNum === BOSS_LEVEL && enemy.typeKey === 'BOSS_DRAGON') {
+        this._onVictory();
+        return;
+      }
       this._checkLevelUp();
     }
 
     if (!this.player.isAlive()) {
       this._onPlayerDeath();
+      return;
     }
 
-    // 清理死敌
+    // 音效
+    if (result.enemyXp > 0) {
+      sound.attackCrit();
+    } else {
+      sound.attackHit();
+    }
+
     this.enemies = this.enemies.filter((e) => e.isAlive());
   }
 
@@ -269,7 +320,6 @@ class Game {
     for (const enemy of this.enemies) {
       if (!enemy.isAlive()) continue;
 
-      // 检查是否相邻 → 攻击
       if (isAdjacent(this.player, enemy)) {
         const result = executeCombat(this.player, enemy, true);
         for (const msg of result.logs) {
@@ -279,10 +329,10 @@ class Game {
           this._onPlayerDeath();
           return;
         }
+        sound.hurt();
         continue;
       }
 
-      // AI 移动
       const dir = enemy.getMove(this.player.x, this.player.y, (mx, my) => {
         if (mx < 0 || my < 0 || mx >= this.mapWidth || my >= this.mapHeight) return false;
         if (this.map[my][mx] === TILE.WALL) return false;
@@ -311,24 +361,28 @@ class Game {
     const { item } = this.groundItems[idx];
     this.player.addToInventory(item);
 
-    // 自动装备更好的武器/护甲
     if (item.type === 'weapon') {
       const current = this.player.equipment.weapon;
       if (!current || (item.attack || 0) > (current.attack || 0)) {
         this.player.equip(item);
+        sound.equip();
         this._logMessage(`裝備了 ${item.name}！`);
       } else {
+        sound.pickup();
         this._logMessage(`拾取 ${item.name} (已放入背包)。`);
       }
     } else if (item.type === 'armor') {
       const current = this.player.equipment.armor;
       if (!current || (item.defense || 0) > (current.defense || 0)) {
         this.player.equip(item);
+        sound.equip();
         this._logMessage(`裝備了 ${item.name}！`);
       } else {
+        sound.pickup();
         this._logMessage(`拾取 ${item.name} (已放入背包)。`);
       }
     } else {
+      sound.pickup();
       this._logMessage(`拾取 ${item.name}。`);
     }
 
@@ -344,6 +398,7 @@ class Game {
       this.fog.addObstacle(seg);
     }
     this.fog.setObserverPosition(this.player.x, this.player.y);
+    sound.doorOpen();
     this._logMessage('打開了門。');
   }
 
@@ -362,7 +417,7 @@ class Game {
       if (item.type === 'potion') detail = ` [恢復${item.heal}HP]`;
       this._logMessage(`  ${item.name}${detail}`);
     }
-    this._logMessage('按 I 關閉背包。使用藥水請按數字鍵。');
+    this._logMessage('按 I 關閉背包。');
   }
 
   _checkLevelUp() {
@@ -374,6 +429,7 @@ class Game {
       this.player.hp = this.player.maxHp;
       this.player.stats.attack += 2;
       this.player.stats.defense += 1;
+      sound.levelUp();
       this._logMessage(`升級！達到第 ${this.player.level} 級！血量恢復。`);
     }
   }
@@ -381,7 +437,16 @@ class Game {
   _onPlayerDeath() {
     this.gameOver = true;
     this.input.detach();
+    sound.death();
     this._logMessage('你已死亡。刷新頁面重新開始。');
+  }
+
+  _onVictory() {
+    this.victory = true;
+    this.gameOver = true;
+    this.input.detach();
+    sound.victory();
+    this._logMessage('恭喜！你擊敗了地龍，成功通關星際征途！');
   }
 
   _logMessage(msg) {
@@ -397,6 +462,7 @@ class Game {
       player: this.player ? this.player.getSummary() : null,
       running: this.running,
       gameOver: this.gameOver,
+      victory: this.victory,
       mapSize: { w: this.mapWidth, h: this.mapHeight },
       obstacleCount: this.obstacles.length,
       enemyCount: this.enemies.filter((e) => e.isAlive()).length,

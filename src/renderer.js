@@ -349,4 +349,101 @@ class Renderer {
   }
 }
 
+  /**
+   * 渲染胜利画面
+   * @param {Object} playerSummary
+   */
+  renderVictory(playerSummary) {
+    const { ctx } = this;
+    ctx.fillStyle = 'rgba(0, 0, 20, 0.85)';
+    ctx.fillRect(0, 0, this.width, this.height);
+
+    ctx.fillStyle = '#ffdd44';
+    ctx.font = 'bold 30px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('★ 通 關 ★', this.width / 2, this.height / 2 - 60);
+
+    ctx.fillStyle = '#fff';
+    ctx.font = '16px monospace';
+    ctx.fillText('你征服了星際征途！', this.width / 2, this.height / 2 - 20);
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '13px monospace';
+    const stats = [
+      `等級: ${playerSummary.level}  |  HP: ${playerSummary.hp}/${playerSummary.maxHp}`,
+      `攻擊: ${playerSummary.attack}  |  防禦: ${playerSummary.defense}`,
+      `武器: ${playerSummary.weapon}  |  護甲: ${playerSummary.armor}`,
+    ];
+    stats.forEach((s, i) => {
+      ctx.fillText(s, this.width / 2, this.height / 2 + 10 + i * 22);
+    });
+
+    ctx.fillStyle = '#ffdd44';
+    ctx.font = '14px monospace';
+    ctx.fillText('感謝遊玩！', this.width / 2, this.height / 2 + 85);
+    ctx.textAlign = 'left';
+  }
+
+  /**
+   * 渲染小地图 (右上角)
+   * @param {number[][]} map - 地牢地图
+   * @param {number} mapW - 地图宽度
+   * @param {number} mapH - 地图高度
+   * @param {number} px - 玩家 x
+   * @param {number} py - 玩家 y
+   * @param {Array} enemies - 敌人列表
+   */
+  renderMinimap(map, mapW, mapH, px, py, enemies) {
+    const { ctx } = this;
+    const scale = 3; // 每个 tile 3px
+    const mw = mapW * scale;
+    const mh = mapH * scale;
+    const mx = this.width - mw - 4;
+    const my = 60;
+
+    ctx.save();
+    ctx.globalAlpha = 0.85;
+    ctx.fillStyle = '#111';
+    ctx.fillRect(mx - 2, my - 2, mw + 4, mh + 4);
+    ctx.fillStyle = '#222';
+    ctx.fillRect(mx, my, mw, mh);
+
+    // 视野范围
+    const viewCX = this.cameraX + Math.floor(this.viewportWidth / 2);
+    const viewCY = this.cameraY + Math.floor(this.viewportHeight / 2);
+    ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+    ctx.strokeRect(
+      mx + (viewCX - this.viewportWidth / 2) * scale,
+      my + (viewCY - this.viewportHeight / 2) * scale,
+      this.viewportWidth * scale,
+      this.viewportHeight * scale
+    );
+
+    // 房间 (简化为色块)
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        const t = map[y][x];
+        if (t === 1) ctx.fillStyle = '#3a3a3a';
+        else if (t === 2) ctx.fillStyle = '#1a1a2e';
+        else if (t === 3) ctx.fillStyle = '#5a2a0a';
+        else if (t === 5 || t === 6) ctx.fillStyle = '#ffcc00';
+        else continue;
+        ctx.fillRect(mx + x * scale, my + y * scale, scale, scale);
+      }
+    }
+
+    // 敌人红点
+    for (const e of enemies) {
+      if (!e.isAlive()) continue;
+      ctx.fillStyle = '#ff3333';
+      ctx.fillRect(mx + e.x * scale - 1, my + e.y * scale - 1, 2, 2);
+    }
+
+    // 玩家绿点
+    ctx.fillStyle = '#00ff00';
+    ctx.fillRect(mx + px * scale - 2, my + py * scale - 2, 4, 4);
+
+    ctx.restore();
+  }
+
 export default Renderer;
