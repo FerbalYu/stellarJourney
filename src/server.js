@@ -216,33 +216,57 @@ app.use((err, req, res, _next) => {
 
 // 启动服务器 (非测试环境)
 if (process.env.NODE_ENV !== 'test') {
-  const server = app.listen(PORT, () => {
-    logger.info(`服务器启动成功`, {
-      port: PORT,
-      env: NODE_ENV,
-      nodeVersion: process.version,
-      pid: process.pid,
+  /**
+   * 尝试绑定端口，被占用则自动递增
+   */
+  const startServer = (startPort) => {
+    const tryPort = startPort;
+    let currentServer = null;
+
+    currentServer = app.listen(tryPort, () => {
+      logger.info(`服务器启动成功`, {
+        port: tryPort,
+        env: NODE_ENV,
+        nodeVersion: process.version,
+        pid: process.pid,
+      });
+      // eslint-disable-next-line no-console
+      console.log(`\n  Server running at http://localhost:${tryPort}`);
+      // eslint-disable-next-line no-console
+      console.log(`  Game:      http://localhost:${tryPort}/game.html\n`);
     });
-  });
 
-  // 优雅关闭
-  const gracefulShutdown = (signal) => {
-    logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
-
-    server.close(() => {
-      logger.info('HTTP 服务器已关闭');
-      process.exit(0);
+    currentServer.on('error', (err) => {
+      if (err.code === 'EADDRINUSE') {
+        logger.warn(`端口 ${tryPort} 已被占用，尝试端口 ${tryPort + 1}...`);
+        currentServer.close();
+        startServer(tryPort + 1);
+      } else {
+        logger.error('服务器启动失败', { error: err.message });
+        throw err;
+      }
     });
 
-    // 强制关闭超时
-    setTimeout(() => {
-      logger.error('无法优雅关闭，强制退出');
-      process.exit(1);
-    }, 10000);
+    // 优雅关闭
+    const gracefulShutdown = (signal) => {
+      logger.info(`收到 ${signal} 信号，开始优雅关闭...`);
+
+      currentServer.close(() => {
+        logger.info('HTTP 服务器已关闭');
+        process.exit(0);
+      });
+
+      setTimeout(() => {
+        logger.error('无法优雅关闭，强制退出');
+        process.exit(1);
+      }, 10000);
+    };
+
+    process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+    process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   };
 
-  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+  startServer(PORT);
 }
 
 // 未捕获的异常处理
